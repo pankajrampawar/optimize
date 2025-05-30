@@ -76,7 +76,6 @@ const EntrySchema = new mongoose.Schema({
     overallLearnings: {
         type: String,
         required: true,
-        trim: true,
     },
     overallScore: {
         type: Number,
