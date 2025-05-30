@@ -75,10 +75,12 @@ export default function DailyForm() {
         setIsSubmitting(true);
 
         try {
-            const response = await submitDailyEntry(formData, user, day)
-
-            if (response.ok) {
+            const response = await submitDailyEntry(formData, user, selectedDate)
+            console.log(response.data.data.overallScore)
+            if (response.success) {
                 alert('Entry saved successfully!');
+
+                alert(`your score is: ${response.data.data.overallScore}`);
                 resetForm();
             } else {
                 alert('Failed to save entry.');

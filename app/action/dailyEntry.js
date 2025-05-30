@@ -1,9 +1,9 @@
-export async function submitDailyEntry(formData, user, day) {
+export async function submitDailyEntry(formData, user, selectedDate) {
     try {
         const response = await fetch('/api/dailyEntry', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...formData, user, day }),
+            body: JSON.stringify({ ...formData, user, day: selectedDate }),
         });
         if (response.ok) {
             return { success: true, data: await response.json() };

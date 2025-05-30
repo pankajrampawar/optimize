@@ -89,28 +89,37 @@ const EntrySchema = new mongoose.Schema({
                     ? this.assignedTasks.reduce((sum, task) => sum + task.score, 0) /
                     this.assignedTasks.length
                     : 0;
+
             const majorTasksCompleted = this.majorTasks.filter(
                 (task) => task.completed
             ).length;
-            const meditationContribution = Math.min(this.meditationMinutes / 60, 1) * 20; // Max 20 points for 60+ min
-            const exerciseContribution = this.exercise ? 10 : 0; // 10 points if exercised
-            const taskCompletionContribution = taskScoreAvg * 3; // Task scores contribute (avg * 3)
-            const majorTaskContribution = (majorTasksCompleted / 3) * 30; // Up to 30 points for 3 tasks
-            const productiveHours =
-                (this.hoursKutumbiq + this.hoursReading + this.hoursImprovingLearning) /
-                24; // Normalize to fraction of day
-            const wastedHoursPenalty = Math.max(0, (10 - this.hoursWasted) / 10) * 20; // Penalty for wasted hours
 
-            return Math.round(
+            // Contribution calculations (ensure each stays within reasonable bounds)
+            const meditationContribution = Math.min(this.meditationMinutes / 60, 1) * 15; // Max 15 points for 60+ min
+            const exerciseContribution = this.exercise ? 10 : 0; // 10 points if exercised
+            const taskCompletionContribution = (taskScoreAvg / 10) * 25; // Max 25 points (normalized from 10-point scale)
+            const majorTaskContribution = (majorTasksCompleted / 3) * 20; // Max 20 points for all 3 tasks
+
+            // Productive hours contribution (max 20 points)
+            const totalProductiveHours = this.hoursKutumbiq + this.hoursReading + this.hoursImprovingLearning;
+            const productiveHoursContribution = Math.min(totalProductiveHours / 12, 1) * 20; // Max 20 points for 12+ productive hours
+
+            // Wasted hours penalty (max 10 points deduction)
+            const wastedHoursPenalty = Math.max(0, Math.min(this.hoursWasted, 10)) * -1; // -1 point per wasted hour, max -10
+
+            // Calculate total score
+            const totalScore =
                 meditationContribution +
                 exerciseContribution +
                 taskCompletionContribution +
                 majorTaskContribution +
-                (productiveHours * 20) +
-                wastedHoursPenalty
-            );
+                productiveHoursContribution +
+                wastedHoursPenalty;
+
+            // Ensure the score is between 0 and 100
+            return Math.max(0, Math.min(100, Math.round(totalScore)));
         },
     },
 });
 
-module.exports = mongoose.model('Entry', EntrySchema);
+module.exports = mongoose.models.Entry || mongoose.model('Entry', EntrySchema);
