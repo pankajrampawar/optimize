@@ -9,11 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.511.0",
     "mongoose": "^8.15.1",
     "next": "15.3.2",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.3",
     "swr": "^2.3.3"
