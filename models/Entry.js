@@ -1,159 +1,117 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const EntrySchema = new mongoose.Schema({
+    day: {
+        type: Date,
+        required: true,
+        default: Date.now,
+    },
     user: {
         type: String,
-        required: [true, 'User is required'],
+        required: true,
         enum: ['pankaj', 'sujal'],
-        lowercase: true
     },
-    date: {
-        type: Date,
-        required: [true, 'Date is required'],
-        default: () => {
-            // Set to start of today (00:00:00)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return today;
-        }
-    },
-    // Core metrics
-    distractions: {
+    meditationMinutes: {
         type: Number,
-        required: [true, 'Distractions count is required'],
-        min: [0, 'Distractions cannot be negative'],
-        max: [100, 'Distractions seems too high']
+        required: true,
+        min: 0,
     },
-    consciousTimepass: {
+    exercise: {
+        type: Boolean,
+        required: true,
+    },
+    assignedTasks: [
+        {
+            task: {
+                type: String,
+                required: true,
+                trim: true,
+            },
+            score: {
+                type: Number,
+                required: true,
+                min: 1,
+                max: 10,
+            },
+        },
+    ],
+    hoursKutumbiq: {
         type: Number,
-        required: [true, 'Conscious timepass is required'],
-        min: [0, 'Time cannot be negative'],
-        max: [24 * 60, 'Cannot exceed 24 hours'] // in minutes
+        required: true,
+        min: 0,
     },
-    workoutTime: {
+    hoursReading: {
         type: Number,
-        required: [true, 'Workout time is required'],
-        min: [0, 'Time cannot be negative'],
-        max: [300, 'Workout time seems too high'] // in minutes, max 5 hours
+        required: true,
+        min: 0,
     },
-    sleepHours: {
+    hoursTimepass: {
         type: Number,
-        required: [true, 'Sleep hours is required'],
-        min: [0, 'Sleep cannot be negative'],
-        max: [24, 'Cannot sleep more than 24 hours']
+        required: true,
+        min: 0,
     },
-    productivityScore: {
+    hoursImprovingLearning: {
         type: Number,
-        required: [true, 'Productivity score is required'],
-        min: [1, 'Minimum score is 1'],
-        max: [10, 'Maximum score is 10']
+        required: true,
+        min: 0,
     },
-    // Optional fields
-    notes: {
+    majorTasks: [
+        {
+            task: {
+                type: String,
+                required: true,
+                trim: true,
+            },
+            completed: {
+                type: Boolean,
+                required: true,
+            },
+        },
+    ],
+    hoursWasted: {
+        type: Number,
+        required: true,
+        min: 0,
+    },
+    overallLearnings: {
         type: String,
-        maxlength: [500, 'Notes cannot exceed 500 characters'],
+        required: true,
         trim: true,
-        default: ''
     },
-    mood: {
-        type: String,
-        enum: ['excellent', 'good', 'okay', 'bad', 'terrible'],
-        default: 'okay'
+    overallScore: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+        default: function () {
+            // Example calculation: adjust weights as needed
+            const taskScoreAvg =
+                this.assignedTasks.length > 0
+                    ? this.assignedTasks.reduce((sum, task) => sum + task.score, 0) /
+                    this.assignedTasks.length
+                    : 0;
+            const majorTasksCompleted = this.majorTasks.filter(
+                (task) => task.completed
+            ).length;
+            const meditationContribution = Math.min(this.meditationMinutes / 60, 1) * 20; // Max 20 points for 60+ min
+            const exerciseContribution = this.exercise ? 10 : 0; // 10 points if exercised
+            const taskCompletionContribution = taskScoreAvg * 3; // Task scores contribute (avg * 3)
+            const majorTaskContribution = (majorTasksCompleted / 3) * 30; // Up to 30 points for 3 tasks
+            const productiveHours =
+                (this.hoursKutumbiq + this.hoursReading + this.hoursImprovingLearning) /
+                24; // Normalize to fraction of day
+            const wastedHoursPenalty = Math.max(0, (10 - this.hoursWasted) / 10) * 20; // Penalty for wasted hours
+
+            return Math.round(
+                meditationContribution +
+                exerciseContribution +
+                taskCompletionContribution +
+                majorTaskContribution +
+                (productiveHours * 20) +
+                wastedHoursPenalty
+            );
+        },
     },
-    // Calculated fields
-    totalActiveTime: {
-        type: Number, // in minutes, calculated from other metrics
-        default: 0
-    }
-}, {
-    timestamps: true,
-    collection: 'entries'
 });
 
-// Compound index to prevent duplicate entries for same user on same date
-EntrySchema.index({ user: 1, date: 1 }, { unique: true });
-
-// Additional indexes for queries
-EntrySchema.index({ date: -1 });
-EntrySchema.index({ user: 1, createdAt: -1 });
-
-// Pre-save middleware to calculate total active time
-EntrySchema.pre('save', function (next) {
-    // Calculate total active time (workout + conscious activities)
-    this.totalActiveTime = this.workoutTime + this.consciousTimepass;
-    next();
-});
-
-// Static methods for common queries
-EntrySchema.statics.findByDateRange = function (startDate, endDate, user = null) {
-    const query = {
-        date: {
-            $gte: new Date(startDate),
-            $lte: new Date(endDate)
-        }
-    };
-
-    if (user) {
-        query.user = user;
-    }
-
-    return this.find(query).sort({ date: -1 });
-};
-
-EntrySchema.statics.getTodaysEntries = function () {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return this.find({
-        date: {
-            $gte: today,
-            $lt: tomorrow
-        }
-    });
-};
-
-EntrySchema.statics.getComparisonData = function (metric, days = 7) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
-
-    return this.aggregate([
-        {
-            $match: {
-                date: { $gte: startDate }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    user: '$user',
-                    date: '$date'
-                },
-                value: { $first: `$${metric}` }
-            }
-        },
-        {
-            $sort: { '_id.date': 1 }
-        }
-    ]);
-};
-
-// Virtual for formatted date
-EntrySchema.virtual('formattedDate').get(function () {
-    return this.date.toISOString().split('T')[0];
-});
-
-// Virtual for productivity grade
-EntrySchema.virtual('productivityGrade').get(function () {
-    if (this.productivityScore >= 9) return 'A+';
-    if (this.productivityScore >= 8) return 'A';
-    if (this.productivityScore >= 7) return 'B';
-    if (this.productivityScore >= 6) return 'C';
-    if (this.productivityScore >= 5) return 'D';
-    return 'F';
-});
-
-// Export model
-export default mongoose.models.Entry || mongoose.model('Entry', EntrySchema);
+module.exports = mongoose.model('Entry', EntrySchema);
