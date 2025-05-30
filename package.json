@@ -11,6 +11,8 @@
   "dependencies": {
     "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.15.0",
+    "howler": "^2.2.4",
     "lucide-react": "^0.511.0",
     "mongoose": "^8.15.1",
     "next": "15.3.2",

@@ -12,6 +12,7 @@ export default function Sidebar() {
         { name: 'Daily Entry', href: '/daily-entry' },
         { name: 'Learnings', href: '/learnings' },
         { name: 'Comparison', href: '/comparison' },
+        { name: 'Timers', href: '/timers' }
     ];
 
     return (
