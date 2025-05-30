@@ -167,7 +167,7 @@ export default function Home() {
                   <Trophy className="w-8 h-8 text-amber-400" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">Today's Winner</h2>
+                  <h2 className="text-2xl font-bold">Today&apos;s Winner</h2>
                   <p className="text-slate-300">Daily champion</p>
                 </div>
               </div>
